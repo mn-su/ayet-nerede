@@ -1,7 +1,7 @@
 import "./style.css";
 import type { IdentifyCandidate, IdentifyResult } from "@tilawa/core";
 import { Mushaf, arabicNumber, type MushafData } from "./mushaf";
-import { StopPolicy, type StopReason } from "./stop-policy";
+import { DEFAULT_STOP_POLICY, StopPolicy, type StopReason } from "./stop-policy";
 import type { FromWorker } from "./protocol";
 import { cacheLoadedResources } from "./offline";
 
@@ -154,7 +154,12 @@ async function startMic(): Promise<void> {
   source.connect(node);
   Object.assign(mic, { ctx, stream, node, analyser });
   clearInterval(statusTimer);
-  statusTimer = window.setInterval(() => { if (app.phase === "listening") renderStatus(); }, 250);
+  statusTimer = window.setInterval(() => {
+    if (app.phase !== "listening") return;
+    // Hard cap on the page's own clock, even if the recognizer falls behind.
+    if (app.micSeconds >= DEFAULT_STOP_POLICY.maxSeconds) finishListening("time");
+    else renderStatus();
+  }, 250);
   // Keep the screen on while listening (where supported).
   try { mic.wakeLock = await (navigator as Navigator & { wakeLock?: { request(t: "screen"): Promise<WakeLockSentinel> } }).wakeLock?.request("screen") ?? null; } catch { /* optional */ }
   const buf = new Float32Array(analyser.fftSize);

@@ -2,7 +2,7 @@
 /**
  * Runs the recognizer off the main thread.
  *
- * main → worker: init | start | audio (mono 16 kHz chunk) | stop | file
+ * main → worker: init | start | audio (mono 16 kHz chunk) | stop
  * worker → main: progress | ready | live (candidates so far) | final | error
  *
  * Every message is handled in order: feed/stop/reset share the streaming
@@ -44,20 +44,32 @@ async function init(base: string): Promise<void> {
 }
 
 /** Live updates whenever new phonemes arrived (one per 300 ms audio chunk at
- * most): the search takes ~10–80 ms on a desktop. */
+ * most): the search takes ~10–80 ms on a desktop. In silence the last result
+ * is re-sent about once a second with the new audio length, so the page's
+ * time-based stop rules keep running. */
 const MIN_UPDATE_MS = 250;
+const HEARTBEAT_MS = 1000;
 let lastLen = -1;
 let lastAt = 0;
+let lastResult: ReturnType<ZipformerSession["candidatesSoFar"]> | null = null;
 
 function live(final: boolean): void {
   if (!session) return;
   const len = session.transcript.length;
   const now = performance.now();
-  if (!final && (len === lastLen || now - lastAt < MIN_UPDATE_MS)) return;
+  const seconds = heardSamples / SAMPLE_RATE;
+  if (!final && len === lastLen) {
+    if (lastResult && now - lastAt >= HEARTBEAT_MS) {
+      lastAt = now;
+      post({ type: "live", result: lastResult, seconds });
+    }
+    return;
+  }
+  if (!final && now - lastAt < MIN_UPDATE_MS) return;
   lastLen = len;
   lastAt = now;
-  const result = session.candidatesSoFar({ topK: TOP_K });
-  post({ type: final ? "final" : "live", result, seconds: heardSamples / SAMPLE_RATE });
+  lastResult = session.candidatesSoFar({ topK: TOP_K });
+  post({ type: final ? "final" : "live", result: lastResult, seconds });
 }
 
 async function handle(msg: ToWorker): Promise<void> {
@@ -68,6 +80,7 @@ async function handle(msg: ToWorker): Promise<void> {
       session.reset();
       heardSamples = 0;
       lastLen = -1;
+      lastResult = null;
       return;
     case "audio":
       heardSamples += msg.samples.length;

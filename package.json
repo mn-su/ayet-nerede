@@ -1,0 +1,21 @@
+{
+  "name": "ayet-nerede",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ayet Nerede?: Okunan ayeti dinleyip bulur; Diyanet mushafındaki sayfasını ve mealini gösterir. Cihaz üzerinde, internetsiz.",
+  "type": "module",
+  "scripts": {
+    "model": "bash scripts/fetch-model.sh",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tilawa/core": "file:vendor/tilawa-core",
+    "onnxruntime-web": "^1.24.2"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  }
+}

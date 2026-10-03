@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ayet Nerede?</title>
+    <meta name="description" content="Okunan ayeti dinleyip bulur; Diyanet mushafındaki sayfasını ve mealini gösterir. Cihaz üzerinde, internetsiz." />
+    <meta name="theme-color" content="#14532d" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ayet Nerede?" />
+    <meta property="og:title" content="Ayet Nerede?" />
+    <meta property="og:description" content="Okunan ayeti dinleyip bulur; Diyanet mushafındaki sayfasını ve mealini gösterir. Cihaz üzerinde, internetsiz." />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>Ayet Nerede?</h1>
+      <label class="switch"><input type="checkbox" id="meal-toggle" /><span>Meal</span></label>
+    </header>
+
+    <main>
+      <section class="listen" aria-label="Dinleme">
+        <p class="tagline">Okunan ayeti dinletin, yerini bulalım.</p>
+        <button id="listen-btn" class="listen-btn" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3" /><path d="M5 10.5v1a7 7 0 0 0 14 0v-1M12 18.5v3" /></svg>
+          <span id="listen-label">Dinle</span>
+        </button>
+        <div class="meter" aria-hidden="true"><span id="meter-bar"></span></div>
+        <p id="status" class="status" role="status"></p>
+      </section>
+
+      <section id="result" class="result" hidden aria-live="polite">
+        <button id="best" class="cand cand--best" type="button"></button>
+        <p id="best-meal" class="best-meal" hidden></p>
+        <button id="share-btn" class="share-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+          <span>Paylaş</span>
+        </button>
+        <p id="note" class="note" hidden></p>
+        <div id="alts-wrap" hidden>
+          <h2 class="alts-title">Diğer olasılıklar</h2>
+          <ol id="alts" class="alts"></ol>
+        </div>
+      </section>
+
+      <section id="page" class="page" hidden aria-labelledby="page-title">
+        <div class="page-bar">
+          <button id="page-next" class="nav-btn" type="button" aria-label="Sonraki sayfa">‹</button>
+          <div class="page-info"><strong id="page-title"></strong><span id="page-sub"></span></div>
+          <button id="page-prev" class="nav-btn" type="button" aria-label="Önceki sayfa">›</button>
+        </div>
+        <div id="page-text" class="mushaf" dir="rtl" lang="ar"></div>
+        <details id="page-meal-wrap" class="page-meal-wrap" hidden>
+          <summary>Bu sayfanın meali</summary>
+          <ol id="page-meal" class="page-meal"></ol>
+        </details>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Tanıma motoru: <a href="https://github.com/yazinsai/tilawa" target="_blank" rel="noopener">Tilawa</a> · Mushaf ve meal: Diyanet İşleri Başkanlığı</p>
+    </footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

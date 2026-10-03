@@ -1,0 +1,7 @@
+node_modules/
+/dist/
+public/models/*.onnx
+public/models/*.json
+.lan-cert/
+*.log
+.DS_Store

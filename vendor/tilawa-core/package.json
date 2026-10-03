@@ -1,0 +1,9 @@
+{
+  "name": "@tilawa/core",
+  "version": "0.4.0-identify.1",
+  "description": "Built copy of @tilawa/core from mn-su/tilawa (branch feat/core-live-candidates, commit 8a8bd70): adds identify() and candidatesSoFar(). Replace with the npm release once they are merged upstream.",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "license": "MIT"
+}

@@ -465,8 +465,10 @@ async function share(): Promise<void> {
   const m = app.mushaf;
   if (!c || !m) return;
   const page = m.pageFor(c.surah, c.ayah);
-  const lines = [`${m.surahName(c.surah)} Suresi, ${c.ayah}. ayet (${c.surah}:${c.ayah})${page !== undefined ? ` · Sayfa ${page}` : ""}`];
+  // The meal first, then where it is from.
+  const lines: string[] = [];
   if (app.meal) lines.push(`“${app.meal[c.surah - 1]![c.ayah - 1]!}”`);
+  lines.push(`${m.surahName(c.surah)} Suresi, ${c.ayah}. ayet (${c.surah}:${c.ayah})${page !== undefined ? ` · Sayfa ${page}` : ""}`);
   const url = location.href.split("#")[0]!;
   const text = lines.join("\n");
   try {

@@ -30,7 +30,8 @@ const pageMeal = $("page-meal");
 const pageMealWrap = $("page-meal-wrap");
 const mealToggle = $<HTMLInputElement>("meal-toggle");
 
-type Phase = "idle" | "loading" | "listening" | "finishing" | "done";
+/** "preparing": first use, the model is being downloaded before the first listen. */
+type Phase = "idle" | "preparing" | "loading" | "listening" | "finishing" | "done";
 
 /** The selection the page was last scrolled to (see render). */
 let scrolledFor = "";
@@ -38,6 +39,12 @@ let scrolledFor = "";
 const app = {
   phase: "idle" as Phase,
   modelReady: false,
+  /** The model is in the offline cache (or loading from it); null until checked. */
+  modelCached: null as boolean | null,
+  /** Set when a first-use download has just finished, until the next listen. */
+  justReady: false,
+  /** A message for the idle state (an error), cleared by the next listen. */
+  notice: null as string | null,
   mushaf: null as Mushaf | null,
   meal: null as string[][] | null,
   result: null as IdentifyResult | null,
@@ -77,7 +84,8 @@ function shownCount(r: IdentifyResult): { shown: number; more: number } {
 }
 
 const prefs = {
-  get meal() { try { return localStorage.getItem("db-meal") === "1"; } catch { return false; } },
+  // On unless the reader turned it off.
+  get meal() { try { return localStorage.getItem("db-meal") !== "0"; } catch { return true; } },
   set meal(v: boolean) { try { localStorage.setItem("db-meal", v ? "1" : "0"); } catch { /* optional */ } },
 };
 
@@ -116,10 +124,20 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
   const msg = e.data;
   if (msg.type === "progress") {
     app.download = Math.min(1, msg.fraction);
+    updateButton();
     renderStatus();
   } else if (msg.type === "ready") {
     app.modelReady = true;
     modelResolve();
+    if (app.phase === "preparing") {
+      // First use: the model has just arrived. Say so; the reader starts listening.
+      app.phase = "idle";
+      app.justReady = true;
+      navigator.vibrate?.(35);
+      listenBtn.classList.add("ready");
+      window.setTimeout(() => listenBtn.classList.remove("ready"), 2400);
+      updateButton();
+    }
     renderStatus();
   } else if (msg.type === "live" || msg.type === "final") {
     onResult(msg.result, msg.seconds, msg.type === "final");
@@ -128,17 +146,21 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
     if (!app.modelReady) modelReject(new Error(msg.message));
     stopMic();
     app.phase = "idle";
-    setStatus(app.modelReady ? "Bir hata oluştu. Tekrar deneyin." : "Model yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+    app.notice = app.modelReady ? "Bir hata oluştu. Tekrar deneyin." : "Tanıma modeli indirilemedi. Bağlantınızı kontrol edip tekrar deneyin.";
+    setStatus(app.notice);
     initStarted = app.modelReady;
     updateButton();
   }
 };
 
-// If the model is already in the offline cache, load it right away.
+// If the model is already in the offline cache, load it right away;
+// otherwise say that the first listen downloads it.
 void (async () => {
   try {
-    if ("caches" in self && (await caches.match(MODEL_URL))) initModel();
-  } catch { /* no cache API */ }
+    app.modelCached = "caches" in self && !!(await caches.match(MODEL_URL));
+  } catch { app.modelCached = false; }
+  if (app.modelCached) initModel();
+  renderStatus();
 })();
 
 // ---------------------------------------------------------------------------
@@ -229,6 +251,18 @@ function resetResult(): void {
 }
 
 async function startListening(): Promise<void> {
+  app.justReady = false;
+  app.notice = null;
+  if (!app.modelReady && app.modelCached === false) {
+    // First use: download the model first, with progress on the button, and
+    // only then open the microphone (a "listening" button that cannot hear
+    // anything yet was confusing).
+    app.phase = "preparing";
+    initModel();
+    updateButton();
+    renderStatus();
+    return;
+  }
   resetResult();
   app.phase = app.modelReady ? "listening" : "loading";
   updateButton();
@@ -238,17 +272,17 @@ async function startListening(): Promise<void> {
     // model loads, so nothing said in the meantime is lost.
     worker.postMessage({ type: "start" });
     app.phase = "listening";
+    renderStatus();
     await startMic();
     renderStatus();
   } catch (err) {
     console.error(err);
     stopMic();
     app.phase = "idle";
-    setStatus(
-      location.protocol !== "https:" && location.hostname !== "localhost"
-        ? "Mikrofon için sayfanın https ile açılması gerekir."
-        : "Mikrofona erişilemedi. Tarayıcı izinlerini kontrol edin.",
-    );
+    app.notice = location.protocol !== "https:" && location.hostname !== "localhost"
+      ? "Mikrofon için sayfanın https ile açılması gerekir."
+      : "Mikrofona erişilemedi. Tarayıcı izinlerini kontrol edin.";
+    setStatus(app.notice);
   }
   updateButton();
 }
@@ -308,8 +342,14 @@ function updateButton(): void {
   const on = app.phase === "listening";
   listenBtn.setAttribute("aria-pressed", String(on));
   listenBtn.classList.toggle("on", on);
-  listenBtn.disabled = app.phase === "finishing" || (app.phase === "loading" && !on);
-  listenLabel.textContent = on ? "Durdur" : "Dinle";
+  const preparing = app.phase === "preparing";
+  listenBtn.classList.toggle("preparing", preparing);
+  listenBtn.disabled = preparing || app.phase === "finishing" || (app.phase === "loading" && !on);
+  const d = app.download;
+  listenBtn.style.setProperty("--p", String(Math.round((d ?? 0) * 100)));
+  listenLabel.textContent = on ? "Durdur"
+    : preparing ? (d !== null && d < 1 ? `%${Math.round(d * 100)}` : "Hazırlanıyor")
+    : "Dinle";
 }
 
 function refText(c: IdentifyCandidate): string {
@@ -326,6 +366,20 @@ const fmtSecs = (s: number) => s.toFixed(1).replace(".", ",");
 function renderStatus(): void {
   const r = app.result;
   const secs = fmtSecs(app.seconds);
+  if (app.phase === "preparing") {
+    const d = app.download;
+    setStatus(d !== null && d < 1
+      ? `Tanıma modeli indiriliyor… %${Math.round(d * 100)}. Yalnızca ilk seferde, sonra internetsiz çalışır.`
+      : "Tanıma modeli hazırlanıyor…");
+    return;
+  }
+  if (app.phase === "idle") {
+    if (app.notice) setStatus(app.notice);
+    else if (app.justReady) setStatus("Hazır. Dinle'ye dokunup okumaya başlayın.");
+    else if (app.modelCached === false && !app.modelReady) setStatus("İlk kullanımda tanıma modeli bir kez indirilir (yaklaşık 75 MB).");
+    else setStatus("");
+    return;
+  }
   if (app.phase === "listening" || app.phase === "loading") {
     if (!app.modelReady) {
       // Audio is kept while the model loads; say what we are waiting for.

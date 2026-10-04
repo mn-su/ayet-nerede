@@ -99,6 +99,17 @@ main { max-width: 720px; margin: 0 auto; padding: 16px; display: flex; flex-dire
 .listen-btn:disabled { opacity: 1; cursor: progress; }
 .listen-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
 .listen-btn svg { width: 40px; height: 40px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+/* First use: the model downloads before the first listen; a gold ring on
+ * the button fills with the progress (--p, 0..100). */
+.listen-btn.preparing {
+  background:
+    radial-gradient(closest-side, var(--accent) calc(100% - 9px), transparent calc(100% - 8px)),
+    conic-gradient(#e2b84c calc(var(--p, 0) * 1%), color-mix(in srgb, var(--accent) 55%, #fff) 0);
+  background-color: var(--accent); /* no pale fade when the ring goes away */
+  font-variant-numeric: tabular-nums;
+}
+/* Model ready: three gold rings (transform/opacity only, see ::after). */
+.listen-btn.ready::after { background: none; border: 4px solid #e2b84c; animation: ring .8s ease-out 3; }
 .listen-btn.on { background: var(--danger); box-shadow: 0 8px 24px rgba(180, 35, 24, .30); }
 .listen-btn.on::after { animation: ring 1.6s ease-out infinite; }
 @keyframes ring { 0% { transform: scale(1); opacity: .35; } 100% { transform: scale(1.32); opacity: 0; } }

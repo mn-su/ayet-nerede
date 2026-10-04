@@ -15,7 +15,8 @@ import { cacheLoadedResources, cachedBytes } from "./offline";
 
 declare const self: DedicatedWorkerGlobalScope;
 
-const TOP_K = 5;
+/** More than the page shows at first: "N ayet daha" reveals the rest. */
+const TOP_K = 15;
 const SAMPLE_RATE = 16000;
 let session: ZipformerSession | null = null;
 let heardSamples = 0;

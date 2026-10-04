@@ -21,6 +21,7 @@ const bestMeal = $("best-meal");
 const noteEl = $("note");
 const altsWrap = $("alts-wrap");
 const altsEl = $("alts");
+const moreBtn = $<HTMLButtonElement>("more-btn");
 const pageEl = $("page");
 const pageTitle = $("page-title");
 const pageSub = $("page-sub");
@@ -52,7 +53,28 @@ const app = {
   /** Model download progress, 0..1; null when it came from the cache. */
   download: null as number | null,
   stopReason: null as StopReason | null,
+  /** Extra candidates revealed with "N ayet daha". */
+  extra: 0,
 };
+
+/** Five ayahs at first (all of a word-for-word tie, up to ten). More only
+ * when they are nearly as close as the best: at least %60 and at most 10
+ * points below it. On 207 recorded takes this shows the button 5× less often
+ * than a plain %60 bar, and finds the same right ayahs. */
+const FIRST_SHOWN = 5;
+const MORE_STEP = 5;
+const MORE_MIN = 0.6;
+const MORE_WITHIN = 0.1;
+
+function shownCount(r: IdentifyResult): { shown: number; more: number } {
+  const c = r.candidates;
+  const bar = Math.max(MORE_MIN, (c[0]?.confidence ?? 0) - MORE_WITHIN);
+  let limit = Math.min(FIRST_SHOWN, c.length);
+  while (limit < c.length && c[limit]!.confidence >= bar - 1e-9) limit++;
+  const first = Math.max(FIRST_SHOWN, Math.min(r.tied, 10));
+  const shown = Math.min(c.length, Math.max(first, Math.min(FIRST_SHOWN + app.extra, limit)));
+  return { shown, more: app.final ? Math.max(0, limit - shown) : 0 };
+}
 
 const prefs = {
   get meal() { try { return localStorage.getItem("db-meal") === "1"; } catch { return false; } },
@@ -201,6 +223,7 @@ function resetResult(): void {
   app.seconds = 0;
   app.micSeconds = 0;
   app.stopReason = null;
+  app.extra = 0;
   policy.reset();
   render();
 }
@@ -334,8 +357,9 @@ function renderResult(): void {
   listenSection.classList.toggle("compact", cands.length > 0 && app.phase === "done");
   shareBtn.hidden = !app.final || cands.length === 0;
   if (!cands.length || !r) return;
-  const sel = cands[app.selected] ?? cands[0]!;
   const best = cands[0]!;
+  const { shown, more } = shownCount(r);
+  if (app.selected >= shown) app.selected = 0;
 
   const badge = app.final
     ? r.decisive ? `<span class="badge ok">Kesin</span>` : `<span class="badge">Olası</span>`
@@ -349,7 +373,9 @@ function renderResult(): void {
   noteEl.hidden = !(r.tied > 1);
   if (r.tied > 1) noteEl.textContent = `Duyulan ifade ${r.tied} ayette kelimesi kelimesine geçiyor; ses tek başına hangisi olduğunu ayırt edemez.`;
 
-  const alts = cands.slice(1);
+  moreBtn.hidden = more === 0;
+  moreBtn.textContent = `${Math.min(MORE_STEP, more)} ayet daha göster`;
+  const alts = cands.slice(1, shown);
   altsWrap.hidden = alts.length === 0;
   altsEl.replaceChildren(...alts.map((c, i) => {
     const li = document.createElement("li");
@@ -365,6 +391,7 @@ function renderResult(): void {
 
   // The meal sits right under the ayah it belongs to: the top card, or the
   // alternative the reader picked.
+  const sel = cands[app.selected] ?? best;
   const showMeal = mealToggle.checked && !!app.meal;
   bestMeal.hidden = !showMeal;
   if (showMeal) {
@@ -393,7 +420,7 @@ function renderPage(): void {
 
   const heard = new Set<string>();
   for (let a = sel.ayah; a <= sel.ayahEnd; a++) heard.add(`${sel.surah}:${a}`);
-  const others = new Set((r?.candidates ?? []).filter((c) => c !== sel).map((c) => `${c.surah}:${c.ayah}`));
+  const others = new Set((r ? r.candidates.slice(0, shownCount(r).shown) : []).filter((c) => c !== sel).map((c) => `${c.surah}:${c.ayah}`));
 
   const frag = document.createDocumentFragment();
   for (const a of page.ayahs) {
@@ -485,6 +512,12 @@ listenBtn.addEventListener("click", () => {
   else void startListening();
 });
 shareBtn.addEventListener("click", () => void share());
+moreBtn.addEventListener("click", () => {
+  const r = app.result;
+  if (!r) return;
+  app.extra = shownCount(r).shown - FIRST_SHOWN + MORE_STEP;
+  render();
+});
 // Leaving the app (switching tabs, locking the phone) ends listening and frees the microphone.
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && app.phase === "listening") finishListening("user");

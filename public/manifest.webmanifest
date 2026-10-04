@@ -2,7 +2,7 @@
   "name": "Ayet Nerede?",
   "short_name": "Ayet Nerede?",
   "description": "Okunan ayeti dinleyip bulur; Diyanet mushafındaki sayfasını ve mealini gösterir. Cihaz üzerinde, internetsiz.",
-  "id": "./",
+  "id": "/ayet-nerede/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

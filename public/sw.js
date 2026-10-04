@@ -3,7 +3,9 @@
 const CACHE = "ayet-nerede-v1"; // keep in sync with src/offline.ts
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+  // Other apps on mn-su.github.io share this origin's caches (Kur'an Takip):
+  // delete only our own old versions.
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith("ayet-nerede-") && k !== CACHE).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", (e) => {
@@ -18,7 +20,7 @@ self.addEventListener("fetch", (e) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(req, copy));
       return res;
-    }).catch(() => caches.match(req).then((r) => r || caches.match("./"))));
+    }).catch(() => caches.match(req, { cacheName: CACHE }).then((r) => r || caches.match("./", { cacheName: CACHE }))));
     return;
   }
   const save = (res) => {
@@ -32,12 +34,12 @@ self.addEventListener("fetch", (e) => {
   // cache first. Everything else (icons, manifest, data) is served from the
   // cache at once and refreshed in the background, so updates still arrive.
   if (/\/(assets|models)\//.test(url.pathname)) {
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then(save)));
+    e.respondWith(caches.match(req, { cacheName: CACHE }).then((hit) => hit || fetch(req).then(save)));
     return;
   }
   // "no-cache": revalidate with the server (a cheap 304 when unchanged)
   // instead of taking the browser's HTTP cache copy.
   const fresh = fetch(new Request(req, { cache: "no-cache" })).then(save);
   e.waitUntil(fresh.catch(() => {}));
-  e.respondWith(caches.match(req).then((hit) => hit || fresh));
+  e.respondWith(caches.match(req, { cacheName: CACHE }).then((hit) => hit || fresh));
 });

@@ -3,7 +3,7 @@ import type { IdentifyCandidate, IdentifyResult } from "@tilawa/core";
 import { Mushaf, arabicNumber, type MushafData } from "./mushaf";
 import { DEFAULT_STOP_POLICY, StopPolicy, type StopReason } from "./stop-policy";
 import type { FromWorker } from "./protocol";
-import { cacheLoadedResources } from "./offline";
+import { CACHE, cacheLoadedResources } from "./offline";
 
 const BASE = import.meta.env.BASE_URL;
 const MODEL_URL = `${BASE}models/zipformer_a0w_ep1_a05.int8.onnx`;
@@ -85,8 +85,8 @@ function shownCount(r: IdentifyResult): { shown: number; more: number } {
 
 const prefs = {
   // On unless the reader turned it off.
-  get meal() { try { return localStorage.getItem("db-meal") !== "0"; } catch { return true; } },
-  set meal(v: boolean) { try { localStorage.setItem("db-meal", v ? "1" : "0"); } catch { /* optional */ } },
+  get meal() { try { return localStorage.getItem("ayet-nerede:meal") !== "0"; } catch { return true; } },
+  set meal(v: boolean) { try { localStorage.setItem("ayet-nerede:meal", v ? "1" : "0"); } catch { /* optional */ } },
 };
 
 // ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
 // otherwise say that the first listen downloads it.
 void (async () => {
   try {
-    app.modelCached = "caches" in self && !!(await caches.match(MODEL_URL));
+    app.modelCached = "caches" in self && !!(await caches.match(MODEL_URL, { cacheName: CACHE }));
   } catch { app.modelCached = false; }
   if (app.modelCached) initModel();
   renderStatus();

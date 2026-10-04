@@ -53,7 +53,7 @@ const app = {
   /** Model download progress, 0..1; null when it came from the cache. */
   download: null as number | null,
   stopReason: null as StopReason | null,
-  /** Extra candidates revealed with "N ayet daha". */
+  /** Extra candidates revealed with "Daha fazla göster". */
   extra: 0,
 };
 
@@ -374,7 +374,6 @@ function renderResult(): void {
   if (r.tied > 1) noteEl.textContent = `Duyulan ifade ${r.tied} ayette kelimesi kelimesine geçiyor; ses tek başına hangisi olduğunu ayırt edemez.`;
 
   moreBtn.hidden = more === 0;
-  moreBtn.textContent = `${Math.min(MORE_STEP, more)} ayet daha göster`;
   const alts = cands.slice(1, shown);
   altsWrap.hidden = alts.length === 0;
   altsEl.replaceChildren(...alts.map((c, i) => {

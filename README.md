@@ -28,5 +28,5 @@ Model değişirse `src/offline.ts` ve `public/sw.js` içindeki önbellek adı (`
 
 ## Kaynaklar ve lisanslar
 
-- **Tanıma motoru:** [Tilawa](https://github.com/yazinsai/tilawa). Kod MIT lisanslıdır. Model ve fonem verisi **NPL-1.2** lisanslıdır: yalnızca ticari olmayan kullanıma izin verir. `vendor/tilawa-core/` klasöründe, [mn-su/tilawa](https://github.com/mn-su/tilawa) çatalındaki `identify()` ve `candidatesSoFar()` eklemelerini içeren derlenmiş SDK bulunur.
+- **Tanıma motoru:** [Tilawa](https://github.com/yazinsai/tilawa). Kod MIT lisanslıdır. Model ve fonem verisi **NPL-1.2** lisanslıdır: yalnızca ticari olmayan kullanıma izin verir. `vendor/tilawa-core/` klasöründe Tilawa SDK'sının derlenmiş bir kopyası bulunur. Bu kopyaya, kısa ve ayet ortasından başlayan kayıtlarda ayet bulmak için `identify()` ve `candidatesSoFar()` işlevleri eklenmiştir. Bu eklemeler henüz Tilawa'ya gönderilmedi.
 - **Mushaf sayfa düzeni, Arapça metin, Elif fontu ve meal:** Diyanet İşleri Başkanlığı.
